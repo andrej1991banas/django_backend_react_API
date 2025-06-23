@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Collect static files
+ENV PYTHONUNBUFFERED=1
 RUN python manage.py collectstatic --noinput
 
 # Run migrations

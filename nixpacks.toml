@@ -1,12 +1,16 @@
+# Setup phase: Install system dependencies
 [phases.setup]
-nixPkgs = ['python39', 'gcc', 'postgresql_16']  # Correct postgresql_16
-aptPkgs = []  # No additional apt packages needed for psycopg2-binary
+  nixPkgs = ['python39', 'gcc']  # Python 3.9 and gcc; no PostgreSQL dev libraries needed for psycopg2-binary
+  aptPkgs = []  # No additional apt packages required
 
+# Install phase: Install Python dependencies
 [phases.install]
-cmds = ['pip install -r requirements.txt']
+  cmds = ['pip install -r requirements.txt']
 
+# Build phase: Collect static files
 [phases.build]
-cmds = ['python manage.py collectstatic --noinput']
+  cmds = ['python manage.py collectstatic ']
 
+# Start phase: Run the application
 [start]
-cmd = 'gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --log-file -'
+  cmd = 'gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --log-file -'
