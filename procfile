@@ -1,5 +1,1 @@
-<<<<<<< HEAD
 web:gunicorn backend.wsgi --log-file -
-=======
-web:gunicorn backend.wsgi --log-file -
->>>>>>> 8cc860e753bd7f5c04a9fd9ab26f6780a5fdc9c7

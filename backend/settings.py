@@ -13,7 +13,7 @@ from datetime import timedelta
 from pathlib import Path
 from environs import Env
 import os
-import dj_database_url 
+import dj_database_url
 
 
 env = Env()
