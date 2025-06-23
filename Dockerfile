@@ -14,12 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Collect static files
-ENV PYTHONUNBUFFERED=1
-RUN python manage.py collectstatic --noinput
 
-# Run migrations
-RUN python manage.py migrate
 
 # Start gunicorn
 CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:$PORT", "--workers", "3", "--log-file", "-"]
