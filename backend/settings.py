@@ -29,7 +29,9 @@ SECRET_KEY = 'django-insecure-zy+$dyl7o3j0y90!^exf0@tv*2mol5y_1g2vn%_7(wzyod2za+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["thymallus-flyfishing.up.railway.app", "127.0.0.1"]
+CSRF_TRUSTED_ORIGINS = ['https://thymallus-flyfishing.up.railway.app', 'https://127.0.0.1']
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
 # Application definition
 
@@ -138,7 +140,7 @@ AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
 # Static files
 STATIC_URL = 'https://django-api-react-ecom.fra1.digitaloceanspaces.com/static/'
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = BASE_DIR / 'static'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 AWS_LOCATION = 'static'
 
