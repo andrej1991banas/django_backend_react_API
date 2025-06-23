@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-zy+$dyl7o3j0y90!^exf0@tv*2mol5y_1g2vn%_7(wzyod2za+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["thymallus-flyfishing.up.railway.app", "127.0.0.1"]
+ALLOWED_HOSTS = ["thymallus-flyfishing.up.railway.app", "127.0.0.1", "0.0.0.0"]
 CSRF_TRUSTED_ORIGINS = ['https://thymallus-flyfishing.up.railway.app', 'https://127.0.0.1']
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
