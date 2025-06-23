@@ -36,7 +36,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin', #it will overwrite the admin
+    'jazzmin',  #it will overwrite the admin
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -48,7 +48,6 @@ INSTALLED_APPS = [
     'vendor',
     'customer',
     'api',
-
     #third party apps
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -140,7 +139,7 @@ AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
 # Static files
 STATIC_URL = 'https://django-api-react-ecom.fra1.digitaloceanspaces.com/static/'
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-STATICFILES_DIRS = BASE_DIR / 'static'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Fixed to be iterable
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 AWS_LOCATION = 'static'
 
