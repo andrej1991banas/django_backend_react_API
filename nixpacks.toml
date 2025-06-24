@@ -1,15 +1,17 @@
 # Setup phase: Install system dependencies
 [phases.setup]
-  nixPkgs = ['python39', 'gcc']  # Python 3.9 and gcc; no PostgreSQL dev libraries needed for psycopg2-binary
-  aptPkgs = []  # No additional apt packages required
+  nixPkgs = ['python312', 'gcc', 'libpq']  # Python 3.12, GCC, and Postgres dev libraries
+  aptPkgs = []  # Additional apt packages not required
 
 # Install phase: Install Python dependencies
 [phases.install]
   cmds = ['pip install -r requirements.txt']
 
-# Build phase: Collect static files
+# Build phase: Prepare the static files
 [phases.build]
-  cmds = ['python manage.py collectstatic ']
+  cmds = [
+    'python manage.py collectstatic --noinput'  # Optional cache-busting
+  ]
 
 # Start phase: Run the application
 [start]

@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Start gunicorn
-CMD ["/bin/bash", "-c", "gunicorn run:app -bind 0.0.0.0:$PORT", "--workers", "3", "--log-file", "-"]
+CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:$PORT", "--workers", "3", "--log-file", "-"]
