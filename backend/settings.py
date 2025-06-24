@@ -74,14 +74,7 @@ MIDDLEWARE = [
 ]
 
 
-# Allow specific origins (production and development)
-CORS_ALLOWED_ORIGINS = [
-    'https://subtle-rabanadas-b5cc2b.netlify.app',
-    'http://localhost:5173',  # For development
-]
 
-# Alternatively, for testing, you can allow all origins (less secure)
-# CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'backend.urls'
 
