@@ -96,19 +96,14 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',  # Specify PostgreSQL
-        'NAME': env.str('DB_NAME', 'sqlite_db'),
-        'USER': env.str('DB_USER', 'default'),
-        'PASSWORD': env.str('DB_PASSWORD', 'default'),
-        'HOST': env.str('DB_HOST', 'localhost'),
-        'PORT': env.int('DB_PORT', 5432),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
-# Load from DATABASE_URL if set, with connection pooling
-if env.bool('USE_POSTGRES', True):  # Use PostgreSQL if USE_POSTGRES is True
-    DATABASES['default'] = dj_database_url.config(default=env("DATABASE_URL"), conn_max_age=600)
 
+db_from_env = dj_database_url.config(conn_max_age=600)
+DATABASES['default'].update(db_from_env)
 
 
 
