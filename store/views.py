@@ -1,3 +1,4 @@
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.conf import settings
 from userauths.models import User
@@ -418,40 +419,46 @@ class CouponAPIView(generics.CreateAPIView):
 class StripeCheckoutView(generics.CreateAPIView):
     serializer_class = CartOrderSerializer
     permission_classes = [AllowAny]
-
     queryset = CartOrder.objects.all()
+
     def create(self, *args, **kwargs):
         order_oid = self.kwargs['order_oid']
-        order = CartOrder.objects.get(oid=order_oid)
-
-        if not order:
-            return Response ({"meesage" : "Order Not Found"}, status=status.HTTP_NOT_FOUND)
-       
         try:
+            order = CartOrder.objects.get(oid=order_oid)
+        except CartOrder.DoesNotExist:
+            return Response({"message": "Order Not Found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            # Get the frontend base URL from settings (production or development)
+            frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+
             checkout_session = stripe.checkout.Session.create(
-                # define attributes for strippe payment process
-                customer_email = order.email,
-                payment_method_types = ['card'],
-                line_items = [
+                customer_email=order.email,
+                payment_method_types=['card'],
+                line_items=[
                     {
-                        'price_data': {'currency': 'eur', 'product_data' : {'name': order.full_name},
-                                    'unit_amount': int(order.total *100)},
+                        'price_data': {
+                            'currency': 'eur',
+                            'product_data': {'name': order.full_name},
+                            'unit_amount': int(order.total * 100),
+                        },
                         'quantity': 1,
-                    
-                    }],
-                    mode = 'payment',
-                    success_url = 'http://localhost:5173/payment-success/' + order.oid +'?session_id={CHECKOUT_SESSION_ID}',
-                    cancel_url = 'http://localhost:5173/payment-cancelled' + order.oid +'?session_id={CHECKOUT_SESSION_ID}',
-                )
+                    }
+                ],
+                mode='payment',
+                success_url=f'{frontend_url}/payment-success/{order.oid}?session_id={{CHECKOUT_SESSION_ID}}',
+                cancel_url=f'{frontend_url}/payment-cancelled/{order.oid}?session_id={{CHECKOUT_SESSION_ID}}',
+            )
 
             order.stripe_session_id = checkout_session.id
             order.save()
 
-            return redirect (checkout_session.url, code=303)
-        # except stripe.error.CardError as e:
-        except stripe.error.StripeError as e: 
-            return Response({"error": f"Something went wrong while creating the checkout sesion: {str(e)}"})
-
+            return HttpResponseRedirect(checkout_session.url, status=303)
+        except stripe.error.StripeError as e:
+            return Response(
+                {"error": f"Something went wrong while creating the checkout session: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class PaymentSuccessView(generics.CreateAPIView):
@@ -460,91 +467,108 @@ class PaymentSuccessView(generics.CreateAPIView):
     queryset = CartOrder.objects.all()
 
     def create(self, request, *args, **kwargs):
-        #get data sent from Reacto to backend
+        # Get data sent from React frontend
         payload = request.data
-        #definingn what data fetch from paylad from React form data 
-        order_oid=payload['order_oid']
-        session_id = payload['session_id']
+        order_oid = payload.get('order_oid')
+        session_id = payload.get('session_id')
 
-        #comparing data from frontend and filter them in backend to return data from backend, the data we need 
-        order = CartOrder.objects.get(oid=order_oid)
+        # Validate payload
+        if not order_oid or not session_id:
+            return Response(
+                {"error": "Missing order_oid or session_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Fetch order from database
+        try:
+            order = CartOrder.objects.get(oid=order_oid)
+        except CartOrder.DoesNotExist:
+            return Response(
+                {"error": "Order not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         order_items = CartOrderItem.objects.filter(order=order)
 
-        #
-        if session_id != 'null':
-            #get session id fro API response from stripe data 
-            session = stripe.checkout.Session.retrieve(session_id)
+        # Verify payment with Stripe if session_id is provided
+        if session_id and session_id != 'null':
+            try:
+                session = stripe.checkout.Session.retrieve(session_id)
+            except stripe.error.InvalidRequestError:
+                return Response(
+                    {"error": "Invalid session_id provided"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except stripe.error.StripeError as e:
+                return Response(
+                    {"error": f"Stripe error: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-            #check if the payment was successfull from strippe API, then change data in backend and show response message
+            # Check payment status from Stripe
             if session.payment_status == "paid":
                 if order.payment_status == "pending":
-                    order.payment_status='paid'
+                    order.payment_status = 'paid'
                     order.save()
 
-                    #send notification to user/buyer
-                    if order.buyer != None:
+                    # Send notification to buyer (if authenticated)
+                    if order.buyer:
                         send_notification(user=order.buyer, order=order)
 
-                    #send notification AND EMAIL    to vendors
-                    for o in order_items:
-                        send_notification(vendor=o.vendor, order=order, order_item=o)
+                    # Send notifications and emails to vendors
+                    for order_item in order_items:
+                        send_notification(vendor=order_item.vendor, order=order, order_item=order_item)
                         context = {
                             'order': order,
                             'order_items': order_items,
-                            'vendor': o.vendor,
+                            'vendor': order_item.vendor,
                         }
 
-                        subject="New Sale"
-                        text_body = render_to_string('email/vendor_sale.txt', context) 
-                        html_body = render_to_string('email/vendor_sale.html', context) 
+                        subject = "New Sale"
+                        text_body = render_to_string('email/vendor_sale.txt', context)
+                        html_body = render_to_string('email/vendor_sale.html', context)
 
                         msg = EmailMultiAlternatives(
-                            subject = subject,
-                            from_email = settings.DEFAULT_FROM_EMAIL,
-                            to = [o.vendor.email],
-                            body = text_body,
+                            subject=subject,
+                            body=text_body,
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            to=[order_item.vendor.email],
                         )
-
                         msg.attach_alternative(html_body, "text/html")
                         msg.send()
 
-
-                    #send email to buyer
+                    # Send email to buyer
                     context = {
                         'order': order,
                         'order_items': order_items,
                     }
-
-                    subject="Order Placed Successfuly"
-                    text_body = render_to_string('email/order_placed.txt', context) 
-                    html_body = render_to_string('email/order_placed.html', context) 
+                    subject = "Order Placed Successfully"
+                    text_body = render_to_string('email/order_placed.txt', context)
+                    html_body = render_to_string('email/order_placed.html', context)
 
                     msg = EmailMultiAlternatives(
-                        subject = subject,
-                        from_email = settings.DEFAULT_FROM_EMAIL,
-                        to = [order.email],
-                        body = text_body,
+                        subject=subject,
+                        body=text_body,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        to=[order.email],
                     )
-
                     msg.attach_alternative(html_body, "text/html")
                     msg.send()
 
-                    return Response({"message": "Payment Successful"})
-                
+                    return Response({"message": "Payment Successful"}, status=status.HTTP_200_OK)
                 else:
-                    return Response({"message": "Already Paid"})
-            #data from stripe API is not "paid" then return message to user 
+                    return Response({"message": "Order already paid"}, status=status.HTTP_200_OK)
             elif session.payment_status == "unpaid":
-                return Response({"message":"Your Invoice Is Unpaid"})  
-            #data from stripe API is "cancelled" then return message to user
+                return Response({"message": "Your invoice is unpaid"}, status=status.HTTP_400_BAD_REQUEST)
             elif session.payment_status == "cancelled":
-                return Response({"message":"Your Order Was Cancelled"}) 
-            #there was no payment made, so something wrong happen no stripe side API 
-            else: 
-                return Response ({"message":"An Error Occured, Try Again"})
-        #there are no data in response from stripe API it means that there was no payment made
-        else: 
-            session = None
+                return Response({"message": "Your order was cancelled"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({"error": "Unknown payment status"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(
+                {"error": "No valid session_id provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class ReviewListAPIView(generics.ListCreateAPIView):

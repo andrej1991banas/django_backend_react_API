@@ -35,6 +35,9 @@ ALLOWED_HOSTS = ["thymallus-flyfishing.up.railway.app", "127.0.0.1"]
 CSRF_TRUSTED_ORIGINS = ['https://thymallus-flyfishing.up.railway.app', 'https://127.0.0.1']
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
+FRONTEND_URL = env('FRONTEND_URL', 'http://localhost:5173')
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -69,6 +72,16 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
+# Allow specific origins (production and development)
+CORS_ALLOWED_ORIGINS = [
+    'https://subtle-rabanadas-b5cc2b.netlify.app',
+    'http://localhost:5173',  # For development
+]
+
+# Alternatively, for testing, you can allow all origins (less secure)
+# CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -170,6 +183,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Payment client setup
 STRIPE_PUBLIC_KEY = env("STRIPE_PUBLIC_KEY")
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
+
+
 
 # Email client setup
 MAILGUN_API_KEY = env("MAILGUN_API_KEY")
